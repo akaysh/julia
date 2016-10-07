@@ -404,6 +404,13 @@ end
 
 ## generic sorting methods ##
 
+add_overflows(x, y) = false
+add_overflows(x::Unsigned, y::Unsigned) = x > ~y
+add_overflows(x::Signed, y::Signed) = (x<0) == (y<0) != ((x+y)<0)
+sub_overflows(x, y) = false
+sub_overflows(x::Unsigned, y::Unsigned) = x < y
+sub_overflows(x::Signed, y::Signed) = (x<0) != (y<0) == ((x-y)<0)
+
 defalg(v::AbstractArray) = DEFAULT_STABLE
 defalg{T<:Number}(v::AbstractArray{T}) = DEFAULT_UNSTABLE
 
@@ -435,9 +442,12 @@ function sort!(v::AbstractVector;
         n = length(v)
         if n > 1
             min, max = extrema(v)
-            rangelen = max - min + 1
-            if rangelen < div(n,2)
-                return sort_int_range!(v, rangelen, min)
+            diff = max - min
+            if !sub_overflows(max, min) && !add_overflows(diff, one(diff))
+                rangelen = diff + one(diff)
+                if rangelen < div(n,2)
+                    return sort_int_range!(v, rangelen, min)
+                end
             end
         end
     end
@@ -523,9 +533,12 @@ function sortperm(v::AbstractVector;
         n = length(v)
         if n > 1
             min, max = extrema(v)
-            rangelen = max - min + 1
-            if rangelen < div(n,2)
-                return sortperm_int_range(v, rangelen, min)
+            diff = max - min
+            if !sub_overflows(max, min) && !add_overflows(diff, one(diff))
+                rangelen = diff + one(diff)
+                if rangelen < div(n,2)
+                    return sortperm_int_range(v, rangelen, min)
+                end
             end
         end
     end
